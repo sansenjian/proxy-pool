@@ -1,0 +1,9 @@
+name = "free-proxy-pool"
+main = "worker.js"
+compatibility_date = "2026-09-01"
+
+# 免费额度: 10万次请求/天, 本池用量远低于此
+
+# [vars]
+# UPSTASH_REDIS_REST_URL = "https://xxxx.upstash.io"
+# UPSTASH_REDIS_REST_TOKEN = "AXxxxxx"   # 建议用 secret: npx wrangler secret put
