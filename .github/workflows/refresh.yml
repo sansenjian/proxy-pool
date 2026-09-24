@@ -1,0 +1,36 @@
+name: Refresh Proxy Pool
+
+on:
+  schedule:
+    - cron: "*/30 * * * *"   # 每30分钟(GitHub最短支持15分钟)
+  workflow_dispatch:          # 允许手动触发
+
+# 防止上一轮没跑完时重叠
+concurrency:
+  group: refresh
+  cancel-in-progress: true
+
+env:
+  UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+  UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install requests
+
+      - name: Crawl & validate & push to Upstash
+        run: python refresh.py
+
+      - name: Notify on failure (optional)
+        if: failure()
+        run: echo "刷新失败, 查看日志"
