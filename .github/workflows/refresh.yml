@@ -2,17 +2,20 @@ name: Refresh Proxy Pool
 
 on:
   schedule:
-    - cron: "*/30 * * * *"   # 每30分钟(GitHub最短支持15分钟)
-  workflow_dispatch:          # 允许手动触发
+    - cron: "17 */2 * * *"    # 每2小时(降低Upstash配额消耗)
+  workflow_dispatch:
 
-# 防止上一轮没跑完时重叠
 concurrency:
   group: refresh
   cancel-in-progress: true
 
+permissions:
+  issues: write   # 失败时自动建issue通知
+
 env:
   UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
   UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+  # TEST_URL: https://你的真实目标站.com   # 取消注释可提升池子可用率
 
 jobs:
   refresh:
@@ -31,6 +34,14 @@ jobs:
       - name: Crawl & validate & push to Upstash
         run: python refresh.py
 
-      - name: Notify on failure (optional)
+      - name: Create issue on failure
         if: failure()
-        run: echo "刷新失败, 查看日志"
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `⚠️ 代理池刷新失败 #${context.runNumber}`,
+              body: `运行日志: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`
+            })
